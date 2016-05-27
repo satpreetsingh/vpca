@@ -1,3 +1,4 @@
+import numpy as np
 import os
 import pickle
 import subprocess
@@ -25,3 +26,14 @@ def download():
         data_dict[i] = dict_
 
     pickle.dump(data_dict, open('example_data.pickle', 'wb'), protocol=-1)
+
+
+def pca(X, n_components=2):
+    """
+    reduce matrix dimensions using
+    principal components analysis
+    """
+    X = X - np.mean(X, axis=0)
+    U, S, V = np.linalg.svd(X, full_matrices=False)
+    X_pca = U[:,:n_components] * S[:n_components]
+    return X_pca
