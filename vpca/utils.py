@@ -4,7 +4,6 @@ import pickle
 import subprocess
 from scipy.io import loadmat
 
-
 def download():
     """
     Download example file and save matfile to pickle format
@@ -26,7 +25,6 @@ def download():
         data_dict[i] = dict_
 
     pickle.dump(data_dict, open('example_data.pickle', 'wb'), protocol=-1)
-
 
 def pca(X, n_components=2):
     """
