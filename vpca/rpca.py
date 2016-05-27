@@ -12,13 +12,13 @@ class rPCA(object):
     Parameters
     ----------
     t : float
-        weight between of l1 norm array
+        weight between l1 norm and nuclear norm
     max_iter : int
         maximum iteration of the model
         default: 1000
     tol : float
-        convergence criteria
-        default: 1e-3
+        convergence criteria, break the loop if algorithm meets criteria
+        default: 1e-6
 
     Reference
     ---------
@@ -26,18 +26,18 @@ class rPCA(object):
         alternating direction method"
     """
     def __init__(self, t=0.5, max_iter=1000,
-                 beta=None, tol=1e-3):
+                 beta=None, tol=1e-6):
 
         self.t = float(t)
         self.gamma = t/(1-t)
         self.beta = None
+        self.tol = tol
         self.max_iter = max_iter
 
-    def _shrink(self, X):
+    def _shrink(self, X, beta):
         """
         Shrink eigenvalue of X matrix
         """
-        beta = self.beta
         [U, s, V] = np.linalg.svd(X, full_matrices=False)
         s_soft = np.maximum(s - (1/beta), 0)
         S_soft = np.diag(s_soft)
@@ -45,8 +45,9 @@ class rPCA(object):
 
     def _proj(self, X):
         """
-        Threshold operator
-        projection on to
+        Threshold operator,
+        euclidean projection to -p <= X <= p
+        where p = gamma/beta
         """
         p = self.gamma/self.beta
         X_p = np.clip(X, -p, p)
@@ -70,7 +71,7 @@ class rPCA(object):
 
         self.C = np.array(C)
         m, n = C.shape
-        beta =  0.25 * m * n/np.linalg.norm(C,1)
+        beta =  0.25 * m * n/np.linalg.norm(C, 1)
         self.beta = beta
         Z = np.zeros_like(C)
         A = np.zeros_like(C)
@@ -79,9 +80,13 @@ class rPCA(object):
         for _ in range(self.max_iter):
             D = (1/beta) * Z - B + C # temporary
             A = D - self._proj(D)
-            B = self._shrink(C - A + (1/beta) * Z)
+            B = self._shrink(C - A + (1./beta) * Z, beta)
             Z = Z - beta * (A + B - C)
+            error = np.linalg.norm(C - A - B, 2)
+            if error < self.tol:
+                break
 
         self.A = A
         self.B = B
+        self.error = error
         return A, B
